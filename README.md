@@ -42,6 +42,8 @@ errors on managed networks without disabling certificate verification.
 
 ## Run in Kaggle
 
+[Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/01-data-loading-and-eda)
+
 1. Import `notebooks/01_data_loading_and_eda.ipynb` into Kaggle.
 2. Enable Internet access for the notebook.
 3. Choose **Run All**.
@@ -62,4 +64,3 @@ copy in this repository before final submission.
 Raw data is downloaded at runtime and is not committed to Git. All cleaning,
 label mapping, and split decisions are implemented in `src/data.py` and
 documented in the notebook.
-
