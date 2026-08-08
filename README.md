@@ -8,7 +8,7 @@ The project uses two public Hugging Face datasets:
 - [SetFit/enron_spam](https://huggingface.co/datasets/SetFit/enron_spam)
 
 The main experiment will compare in-domain and cross-domain performance. Day 1
-loads, cleans, validates, and explores the data. Day 2 will add a transparent
+loads, cleans, validates, and explores the data. Day 2 adds a transparent
 TF-IDF logistic-regression baseline before any neural model is introduced.
 
 ## Repository structure
@@ -16,10 +16,13 @@ TF-IDF logistic-regression baseline before any neural model is introduced.
 ```text
 notebooks/
   01_data_loading_and_eda.ipynb
+  02_tfidf_logistic_baseline.ipynb
 src/
   data.py
+  modeling.py
 tests/
   test_data.py
+  test_modeling.py
 ```
 
 ## Run in VS Code on Windows
@@ -34,8 +37,8 @@ python -m pip install -r requirements-windows.txt
 python -m pytest
 ```
 
-Open `notebooks/01_data_loading_and_eda.ipynb`, select the `.venv` kernel, and
-choose **Run All**.
+Open the notebooks in numerical order, select the `.venv` kernel, and choose
+**Run All**.
 
 `requirements-windows.txt` uses the Windows certificate store. It avoids SSL
 errors on managed networks without disabling certificate verification.
@@ -44,7 +47,9 @@ errors on managed networks without disabling certificate verification.
 
 [Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/01-data-loading-and-eda)
 
-1. Import `notebooks/01_data_loading_and_eda.ipynb` into Kaggle.
+1. Import the notebooks in numerical order, starting with
+   `notebooks/01_data_loading_and_eda.ipynb` and then
+   `notebooks/02_tfidf_logistic_baseline.ipynb`.
 2. Enable Internet access for the notebook.
 3. Choose **Run All**.
 
@@ -58,6 +63,15 @@ copy in this repository before final submission.
 - Cleaned Enron training source: 28,528 unique messages; about 48.1% spam.
 - Median length: 61 characters for SMS and about 710 for Enron email.
 - No exact normalized message is shared between the two sources.
+
+## Day 2 baseline findings
+
+- SMS → SMS: F1 0.948.
+- Enron → Enron: F1 0.987.
+- SMS → Enron: F1 0.512, a 0.436 drop from the SMS in-domain result.
+- Enron → SMS: F1 0.238.
+- The word-based baseline performs well in-domain but does not generalize well
+  between short SMS messages and longer emails.
 
 ## Data policy
 
