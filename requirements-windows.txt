@@ -1,0 +1,3 @@
+-r requirements.txt
+pip-system-certs>=5,<6
+
