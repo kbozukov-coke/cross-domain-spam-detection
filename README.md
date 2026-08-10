@@ -10,7 +10,8 @@ The project uses two public Hugging Face datasets:
 The experiment compares in-domain and cross-domain performance. Notebook 1
 loads, cleans, validates, and explores the data. Notebook 2 establishes a
 TF-IDF logistic-regression baseline. Notebook 3 introduces a TextCNN trained
-from scratch on each domain.
+from scratch on each domain. Notebook 4 fine-tunes a pretrained DistilBERT
+classifier and compares all three approaches.
 
 ## Repository structure
 
@@ -19,12 +20,15 @@ notebooks/
   01_data_loading_and_eda.ipynb
   02_tfidf_logistic_baseline.ipynb
   03_textcnn.ipynb
+  04_distilbert_fine_tuning.ipynb
 src/
   data.py
+  distilbert.py
   modeling.py
   textcnn.py
 tests/
   test_data.py
+  test_distilbert.py
   test_modeling.py
   test_textcnn.py
 ```
@@ -41,8 +45,9 @@ python -m pip install -r requirements-windows.txt
 python -m pytest
 ```
 
-Open the notebooks in numerical order, select the `.venv` kernel, and choose
-**Run All**.
+Open the notebooks in numerical order and select the `.venv` kernel. Notebooks
+1 and 2 can be run locally; the two neural-network notebooks are intended for
+Kaggle GPU sessions.
 
 `requirements-windows.txt` uses the Windows certificate store. It avoids SSL
 errors on managed networks without disabling certificate verification.
@@ -55,7 +60,7 @@ errors on managed networks without disabling certificate verification.
 
 1. Import the notebooks in numerical order.
 2. Enable Internet access for the notebook.
-3. Enable a GPU accelerator for Notebook 3 when available.
+3. Enable a GPU accelerator for Notebooks 3 and 4.
 4. Choose **Run All**.
 
 The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
@@ -90,6 +95,13 @@ comparison isolates the effect of the model architecture.
 - Enron → SMS: F1 0.266, an improvement of 0.028 over the ML baseline.
 - The SMS → Enron transfer gap decreases from 0.436 to 0.367, although the
   cross-domain ROC-AUC of 0.540 shows that generalization remains limited.
+
+## Notebook 4: DistilBERT fine-tuning
+
+Notebook 4 fine-tunes `distilbert-base-uncased` separately on SMS and Enron.
+It uses the same four evaluations, balanced class weights, and F1-based model
+selection. Models are trained sequentially and released from GPU memory between
+runs. The final section compares DistilBERT with both previous approaches.
 
 ## Data policy
 
