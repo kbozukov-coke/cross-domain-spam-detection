@@ -59,7 +59,12 @@ def build_text_vectorizer(
         output_sequence_length=sequence_length,
         name="text_vectorization",
     )
-    vectorizer.adapt(np.asarray(train_texts, dtype=str))
+    # Keep variable-length Python strings. Converting Enron to a fixed-width
+    # Unicode array would allocate memory for every row at the maximum email
+    # length (more than 20 GB for the current training split).
+    text_array = np.asarray(train_texts, dtype=object)
+    text_batches = tf.data.Dataset.from_tensor_slices(text_array).batch(256)
+    vectorizer.adapt(text_batches)
     return vectorizer
 
 
@@ -127,9 +132,9 @@ def fit_textcnn(
     """Fit one TextCNN without adapting any component on validation or test data."""
 
     set_global_seed(random_state)
-    train_texts = train_frame["text"].astype(str).to_numpy()
+    train_texts = train_frame["text"].astype(str).to_numpy(dtype=object)
     train_labels = train_frame["label"].to_numpy(dtype=np.float32)
-    validation_texts = validation_frame["text"].astype(str).to_numpy()
+    validation_texts = validation_frame["text"].astype(str).to_numpy(dtype=object)
     validation_labels = validation_frame["label"].to_numpy(dtype=np.float32)
 
     vectorizer = build_text_vectorizer(
@@ -186,7 +191,8 @@ def evaluate_textcnn(
     """Evaluate a fitted TextCNN with the same metrics as the ML baseline."""
 
     y_true = frame["label"].to_numpy()
-    y_score = model.predict(frame["text"].astype(str).to_numpy(), verbose=0).reshape(-1)
+    test_texts = frame["text"].astype(str).to_numpy(dtype=object)
+    y_score = model.predict(test_texts, verbose=0).reshape(-1)
     y_pred = (y_score >= 0.5).astype(np.int8)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
@@ -257,7 +263,8 @@ def textcnn_prediction_details(model: keras.Model, frame: pd.DataFrame) -> pd.Da
     """Attach TextCNN predictions and probabilities for error analysis."""
 
     details = frame.loc[:, ["text", "label", "source"]].copy()
-    scores = model.predict(details["text"].astype(str).to_numpy(), verbose=0).reshape(-1)
+    detail_texts = details["text"].astype(str).to_numpy(dtype=object)
+    scores = model.predict(detail_texts, verbose=0).reshape(-1)
     details["prediction"] = (scores >= 0.5).astype(np.int8)
     details["spam_probability"] = scores
     details["correct"] = details["label"].eq(details["prediction"])
