@@ -51,6 +51,8 @@ errors on managed networks without disabling certificate verification.
 
 [Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/01-data-loading-and-eda)
 
+[Executed Kaggle notebook: 03 - TextCNN](https://www.kaggle.com/code/kaloyanbozukov/notebook-3-textcnn-cross-domain-experiment)
+
 1. Import the notebooks in numerical order.
 2. Enable Internet access for the notebook.
 3. Enable a GPU accelerator for Notebook 3 when available.
@@ -81,6 +83,13 @@ copy in this repository before final submission.
 The TextCNN learns task-specific word embeddings and local phrase patterns. It
 uses the same splits and four train/test combinations as the baseline so the
 comparison isolates the effect of the model architecture.
+
+- SMS → SMS: F1 0.930.
+- Enron → Enron: F1 0.992.
+- SMS → Enron: F1 0.563, an improvement of 0.051 over the ML baseline.
+- Enron → SMS: F1 0.266, an improvement of 0.028 over the ML baseline.
+- The SMS → Enron transfer gap decreases from 0.436 to 0.367, although the
+  cross-domain ROC-AUC of 0.540 shows that generalization remains limited.
 
 ## Data policy
 
