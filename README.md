@@ -41,16 +41,13 @@ Python 3.11 is recommended.
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r requirements-windows.txt
+python -m pip install -r requirements.txt
 python -m pytest
 ```
 
 Open the notebooks in numerical order and select the `.venv` kernel. Notebooks
 1 and 2 can be run locally; the two neural-network notebooks are intended for
 Kaggle GPU sessions.
-
-`requirements-windows.txt` uses the Windows certificate store. It avoids SSL
-errors on managed networks without disabling certificate verification.
 
 ## Run in Kaggle
 
