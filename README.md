@@ -26,10 +26,13 @@ src/
   distilbert.py
   modeling.py
   textcnn.py
+results/
+  textcnn_results.csv
 tests/
   test_data.py
   test_distilbert.py
   test_modeling.py
+  test_result_artifacts.py
   test_textcnn.py
 ```
 
@@ -55,14 +58,17 @@ Kaggle GPU sessions.
 
 [Executed Kaggle notebook: 03 - TextCNN](https://www.kaggle.com/code/kaloyanbozukov/notebook-3-textcnn-cross-domain-experiment)
 
+[Executed Kaggle notebook: 04 - DistilBERT fine-tuning](https://www.kaggle.com/code/kaloyanbozukov/notebook4?scriptVersionId=341691004)
+
 1. Import the notebooks in numerical order.
 2. Enable Internet access for the notebook.
 3. Enable a GPU accelerator for Notebooks 3 and 4.
 4. Choose **Run All**.
 
 The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
-same versioned code from `src/`. Download the executed notebook and replace the
-copy in this repository before final submission.
+same versioned code from `src/`. The public Kaggle links are the execution
+records for the GPU notebooks; the repository copies remain the versioned
+sources.
 
 ## Notebook 1 findings
 
@@ -100,8 +106,28 @@ It uses the same four evaluations, balanced class weights, and F1-based model
 selection. Models are trained sequentially and released from GPU memory between
 runs. The final section compares DistilBERT with both previous approaches.
 
+- SMS → SMS: F1 0.974, the best in-domain SMS result.
+- Enron → Enron: F1 0.991, comparable with the other in-domain results.
+- SMS → Enron: F1 0.557, above the 0.512 baseline but slightly below TextCNN's
+  0.563; ROC-AUC 0.480 confirms weak transfer.
+- Enron → SMS: F1 0.268 with recall 0.927 and precision 0.157, showing that the
+  model identifies most spam but produces many false positives.
+- Fine-tuning a pretrained Transformer improves some scores, but it does not
+  remove the domain shift between short SMS messages and longer emails.
+
+Overall, all three approaches perform well in-domain and deteriorate sharply
+across domains. TextCNN gives the best SMS → Enron F1, while DistilBERT gives the
+best SMS → SMS F1. The central answer is therefore **no**: training on SMS alone
+does not produce a reliable email spam classifier.
+
 ## Data policy
 
 Raw data is downloaded at runtime and is not committed to Git. All cleaning,
 label mapping, and split decisions are implemented in `src/data.py` and
 documented in the notebook.
+
+## References
+
+- Yoon Kim. [Convolutional Neural Networks for Sentence Classification](https://aclanthology.org/D14-1181/), EMNLP 2014.
+- Victor Sanh et al. [DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter](https://arxiv.org/abs/1910.01108), 2019.
+- Shai Ben-David et al. [A theory of learning from different domains](https://link.springer.com/article/10.1007/s10994-009-5152-4), Machine Learning 2010.

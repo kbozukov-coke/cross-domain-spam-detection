@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 import time
 from collections.abc import Mapping, Sequence
 
@@ -26,8 +25,6 @@ RANDOM_STATE = 42
 def set_global_seed(random_state: int = RANDOM_STATE) -> None:
     """Seed Python, NumPy, and TensorFlow for reproducible training."""
 
-    random.seed(random_state)
-    np.random.seed(random_state)
     tf.keras.utils.set_random_seed(random_state)
 
 
