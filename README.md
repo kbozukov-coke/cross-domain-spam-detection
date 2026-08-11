@@ -36,22 +36,6 @@ tests/
   test_textcnn.py
 ```
 
-## Run in VS Code on Windows
-
-Python 3.11 is recommended.
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pytest
-```
-
-Open the notebooks in numerical order and select the `.venv` kernel. Notebooks
-1 and 2 can be run locally; the two neural-network notebooks are intended for
-Kaggle GPU sessions.
-
 ## Run in Kaggle
 
 [Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/01-data-loading-and-eda)
@@ -120,11 +104,6 @@ across domains. TextCNN gives the best SMS → Enron F1, while DistilBERT gives 
 best SMS → SMS F1. The central answer is therefore **no**: training on SMS alone
 does not produce a reliable email spam classifier.
 
-## Data policy
-
-Raw data is downloaded at runtime and is not committed to Git. All cleaning,
-label mapping, and split decisions are implemented in `src/data.py` and
-documented in the notebook.
 
 ## References
 
