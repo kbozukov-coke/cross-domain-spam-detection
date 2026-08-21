@@ -1,6 +1,11 @@
+import numpy as np
 import pandas as pd
 
-from src.textcnn import balanced_class_weights, run_textcnn_experiments
+from src.textcnn import (
+    balanced_class_weights,
+    evaluate_textcnn,
+    run_textcnn_experiments,
+)
 
 
 def _frame(domain: str, split: str) -> pd.DataFrame:
@@ -26,6 +31,36 @@ def _frame(domain: str, split: str) -> pd.DataFrame:
 def test_balanced_class_weights_give_more_weight_to_minority() -> None:
     weights = balanced_class_weights([0, 0, 0, 1])
     assert weights[1] > weights[0]
+
+
+class _FixedTextCNN:
+    def predict(self, texts: np.ndarray, verbose: int = 0) -> np.ndarray:
+        assert verbose == 0
+        assert len(texts) == 4
+        return np.array([[0.1], [0.2], [0.8], [0.9]])
+
+
+def test_evaluate_textcnn_uses_the_shared_metric_schema() -> None:
+    frame = pd.DataFrame(
+        {
+            "text": ["a", "b", "c", "d"],
+            "label": [0, 0, 1, 1],
+            "source": ["sms"] * 4,
+        }
+    )
+
+    metrics = evaluate_textcnn(
+        _FixedTextCNN(),
+        frame,
+        train_domain="sms",
+        test_domain="enron",
+        training_info={"training_seed": 73},
+    )
+
+    assert metrics["training_seed"] == 73
+    assert metrics["macro_f1"] == 1.0
+    assert metrics["spam_support"] == 2
+    assert 0 <= metrics["ece"] <= 1
 
 
 def test_textcnn_experiments_smoke_test() -> None:

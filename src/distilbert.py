@@ -8,16 +8,9 @@ from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
 
-from .protocol import REFERENCE_TRAINING_SEED
+from .evaluation import binary_classification_metrics
+from .protocol import DECISION_THRESHOLD, REFERENCE_TRAINING_SEED
 
 
 def balanced_class_weights(labels: Sequence[int]) -> dict[int, float]:
@@ -56,19 +49,7 @@ def classification_metrics_from_logits(
         raise ValueError("Labels and logits must contain the same number of rows.")
 
     y_score = probabilities_from_logits(logit_array)
-    y_pred = logit_array.argmax(axis=1).astype(np.int8)
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
-    return {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
-        "roc_auc": roc_auc_score(y_true, y_score),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
-    }
+    return binary_classification_metrics(y_true, y_score)
 
 
 def distilbert_prediction_details(
@@ -80,8 +61,9 @@ def distilbert_prediction_details(
     if len(frame) != len(logits):
         raise ValueError("The frame and logits must contain the same number of rows.")
     details = frame.loc[:, ["text", "label", "source"]].copy()
-    details["prediction"] = np.asarray(logits).argmax(axis=1).astype(np.int8)
-    details["spam_probability"] = probabilities_from_logits(logits)
+    scores = probabilities_from_logits(logits)
+    details["prediction"] = (scores >= DECISION_THRESHOLD).astype(np.int8)
+    details["spam_probability"] = scores
     details["correct"] = details["label"].eq(details["prediction"])
     return details
 
@@ -292,6 +274,7 @@ def run_distilbert_experiments(
                 result_rows.append(
                     {
                         "model": "DistilBERT",
+                        "training_seed": random_state,
                         "train_domain": train_domain,
                         "test_domain": test_domain,
                         "setting": (

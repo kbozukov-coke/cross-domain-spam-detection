@@ -8,10 +8,12 @@ The project uses two public Hugging Face datasets:
 - [SetFit/enron_spam](https://huggingface.co/datasets/SetFit/enron_spam)
 
 The experiment compares in-domain and cross-domain performance. Notebook 1
-loads, cleans, validates, and explores the data. Notebook 2 establishes a
-TF-IDF logistic-regression baseline. Notebook 3 introduces a TextCNN trained
-from scratch on each domain. Notebook 4 fine-tunes a pretrained DistilBERT
-classifier and compares all three approaches.
+loads, cleans, validates, and explores the data, including tokenizer-specific
+length and truncation rates. Notebook 2 establishes a TF-IDF
+logistic-regression baseline with expanded metrics and test-sample bootstrap
+intervals. Notebook 3 introduces a TextCNN trained from scratch on each domain.
+Notebook 4 fine-tunes a pretrained DistilBERT classifier and compares all three
+approaches.
 
 ## Experimental protocol
 
@@ -42,6 +44,23 @@ holdouts. They remain excluded from all new design and selection decisions.
 The shared constants are defined in `src/protocol.py` so the notebooks cannot
 silently use different splits, seeds, directions, or metric roles.
 
+## Shared evaluation and controls
+
+The robustness extension uses two model-independent utility modules:
+
+- `src/evaluation.py` computes the original metrics together with macro-F1,
+  balanced accuracy, MCC, PR-AUC, class support, Brier score, log loss, and
+  equal-frequency calibration error. It also provides per-seed aggregation,
+  stratified bootstrap intervals, paired model comparisons, reliability-table
+  data, and one stable per-example prediction schema.
+- `src/controls.py` creates deterministic class-count-matched training subsets
+  without changing the prepared splits or mutating their data frames.
+
+Control sampling uses seed `2026`; bootstrap resampling uses seed `20260821`.
+These are deliberately separate from the five neural training seeds. Model
+checkpoints are not part of this layer, and no training is performed by either
+module.
+
 ## Repository structure
 
 ```text
@@ -51,16 +70,20 @@ notebooks/
   03_textcnn.ipynb
   04_distilbert_fine_tuning.ipynb
 src/
+  controls.py
   data.py
   distilbert.py
+  evaluation.py
   modeling.py
   protocol.py
   textcnn.py
 results/
   textcnn_results.csv
 tests/
+  test_controls.py
   test_data.py
   test_distilbert.py
+  test_evaluation.py
   test_modeling.py
   test_protocol.py
   test_result_artifacts.py

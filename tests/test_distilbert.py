@@ -31,7 +31,10 @@ def test_classification_metrics_from_logits() -> None:
     )
     assert metrics["accuracy"] == pytest.approx(1.0)
     assert metrics["f1"] == pytest.approx(1.0)
+    assert metrics["macro_f1"] == pytest.approx(1.0)
     assert metrics["roc_auc"] == pytest.approx(1.0)
+    assert metrics["pr_auc"] == pytest.approx(1.0)
+    assert metrics["spam_support"] == 2
     assert (metrics["tn"], metrics["fp"], metrics["fn"], metrics["tp"]) == (
         2,
         0,

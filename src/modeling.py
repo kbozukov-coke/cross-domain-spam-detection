@@ -8,17 +8,10 @@ import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
 from sklearn.pipeline import Pipeline
 
-from .protocol import REFERENCE_TRAINING_SEED
+from .evaluation import binary_classification_metrics
+from .protocol import DECISION_THRESHOLD, REFERENCE_TRAINING_SEED
 
 
 def build_tfidf_logistic_baseline(
@@ -56,28 +49,21 @@ def evaluate_model(
     frame: pd.DataFrame,
     train_domain: str,
     test_domain: str,
+    training_seed: int = REFERENCE_TRAINING_SEED,
 ) -> dict[str, object]:
     """Evaluate one fitted model and return classification metrics."""
 
     y_true = frame["label"]
-    y_pred = model.predict(frame["text"])
     y_score = model.predict_proba(frame["text"])[:, 1]
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
     return {
+        "model": "TF-IDF + Logistic Regression",
+        "training_seed": training_seed,
         "train_domain": train_domain,
         "test_domain": test_domain,
         "setting": "in-domain" if train_domain == test_domain else "cross-domain",
         "test_rows": len(frame),
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
-        "roc_auc": roc_auc_score(y_true, y_score),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
+        **binary_classification_metrics(y_true, y_score),
     }
 
 
@@ -108,6 +94,7 @@ def run_transfer_experiments(
                     splits[test_domain]["test"],
                     train_domain=train_domain,
                     test_domain=test_domain,
+                    training_seed=random_state,
                 )
             )
 
@@ -119,7 +106,8 @@ def prediction_details(model: ClassifierMixin, frame: pd.DataFrame) -> pd.DataFr
     """Attach predictions and spam probabilities for error analysis."""
 
     details = frame.loc[:, ["text", "label", "source"]].copy()
-    details["prediction"] = model.predict(details["text"])
-    details["spam_probability"] = model.predict_proba(details["text"])[:, 1]
+    scores = model.predict_proba(details["text"])[:, 1]
+    details["prediction"] = (scores >= DECISION_THRESHOLD).astype("int8")
+    details["spam_probability"] = scores
     details["correct"] = details["label"].eq(details["prediction"])
     return details

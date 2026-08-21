@@ -1,6 +1,7 @@
+import numpy as np
 import pandas as pd
 
-from src.modeling import prediction_details, run_transfer_experiments
+from src.modeling import evaluate_model, prediction_details, run_transfer_experiments
 
 
 def _frame(domain: str, split: str) -> pd.DataFrame:
@@ -14,6 +15,36 @@ def _frame(domain: str, split: str) -> pd.DataFrame:
         for item in suffix
     ]
     return pd.DataFrame(ham + spam)
+
+
+class _FixedProbabilityModel:
+    def predict_proba(self, texts: pd.Series) -> np.ndarray:
+        probabilities = np.array([0.1, 0.2, 0.8, 0.9])
+        assert len(texts) == len(probabilities)
+        return np.column_stack([1 - probabilities, probabilities])
+
+
+def test_evaluate_model_uses_the_shared_metric_schema() -> None:
+    frame = pd.DataFrame(
+        {
+            "text": ["a", "b", "c", "d"],
+            "label": [0, 0, 1, 1],
+            "source": ["sms"] * 4,
+        }
+    )
+
+    metrics = evaluate_model(
+        _FixedProbabilityModel(),
+        frame,
+        train_domain="sms",
+        test_domain="sms",
+        training_seed=13,
+    )
+
+    assert metrics["training_seed"] == 13
+    assert metrics["macro_f1"] == 1.0
+    assert metrics["spam_support"] == 2
+    assert 0 <= metrics["brier_score"] <= 1
 
 
 def test_transfer_experiments_cover_all_domain_pairs() -> None:

@@ -8,17 +8,10 @@ from collections.abc import Mapping, Sequence
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
 from tensorflow import keras
 
-from .protocol import REFERENCE_TRAINING_SEED
+from .evaluation import binary_classification_metrics
+from .protocol import DECISION_THRESHOLD, REFERENCE_TRAINING_SEED
 
 
 def set_global_seed(random_state: int = REFERENCE_TRAINING_SEED) -> None:
@@ -169,6 +162,7 @@ def fit_textcnn(
     )
     training_seconds = time.perf_counter() - started_at
     training_info: dict[str, float | int] = {
+        "training_seed": random_state,
         "epochs_trained": len(history.history["loss"]),
         "training_seconds": training_seconds,
         "vocabulary_size": len(vectorizer.get_vocabulary()),
@@ -189,24 +183,17 @@ def evaluate_textcnn(
     y_true = frame["label"].to_numpy()
     test_texts = frame["text"].astype(str).to_numpy(dtype=object)
     y_score = model.predict(test_texts, verbose=0).reshape(-1)
-    y_pred = (y_score >= 0.5).astype(np.int8)
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
     result: dict[str, object] = {
         "model": "TextCNN",
+        "training_seed": (
+            training_info.get("training_seed") if training_info else None
+        ),
         "train_domain": train_domain,
         "test_domain": test_domain,
         "setting": "in-domain" if train_domain == test_domain else "cross-domain",
         "test_rows": len(frame),
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
-        "roc_auc": roc_auc_score(y_true, y_score),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
+        **binary_classification_metrics(y_true, y_score),
     }
     if training_info:
         result.update(training_info)
@@ -261,7 +248,7 @@ def textcnn_prediction_details(model: keras.Model, frame: pd.DataFrame) -> pd.Da
     details = frame.loc[:, ["text", "label", "source"]].copy()
     detail_texts = details["text"].astype(str).to_numpy(dtype=object)
     scores = model.predict(detail_texts, verbose=0).reshape(-1)
-    details["prediction"] = (scores >= 0.5).astype(np.int8)
+    details["prediction"] = (scores >= DECISION_THRESHOLD).astype(np.int8)
     details["spam_probability"] = scores
     details["correct"] = details["label"].eq(details["prediction"])
     return details
