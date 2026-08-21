@@ -18,12 +18,11 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-
-RANDOM_STATE = 42
+from .protocol import REFERENCE_TRAINING_SEED
 
 
 def build_tfidf_logistic_baseline(
-    random_state: int = RANDOM_STATE,
+    random_state: int = REFERENCE_TRAINING_SEED,
     max_features: int = 50_000,
 ) -> Pipeline:
     """Build a transparent word TF-IDF and logistic-regression baseline."""
@@ -84,7 +83,7 @@ def evaluate_model(
 
 def run_transfer_experiments(
     splits: Mapping[str, Mapping[str, pd.DataFrame]],
-    random_state: int = RANDOM_STATE,
+    random_state: int = REFERENCE_TRAINING_SEED,
 ) -> tuple[dict[str, Pipeline], pd.DataFrame]:
     """Train one baseline per domain and evaluate it on both test domains."""
 

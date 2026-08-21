@@ -9,8 +9,8 @@ import pandas as pd
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split
 
+from .protocol import DATA_SPLIT_SEED
 
-RANDOM_STATE = 42
 LABEL_NAMES = {0: "ham", 1: "spam"}
 REQUIRED_COLUMNS = {"text", "label", "source"}
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -115,7 +115,7 @@ def _reset_splits(**splits: pd.DataFrame) -> dict[str, pd.DataFrame]:
 
 def split_sms_frame(
     frame: pd.DataFrame,
-    random_state: int = RANDOM_STATE,
+    random_state: int = DATA_SPLIT_SEED,
 ) -> dict[str, pd.DataFrame]:
     """Create a deterministic 70/15/15 stratified SMS split."""
 
@@ -137,7 +137,7 @@ def split_sms_frame(
 def split_enron_frame(
     train_frame: pd.DataFrame,
     test_frame: pd.DataFrame,
-    random_state: int = RANDOM_STATE,
+    random_state: int = DATA_SPLIT_SEED,
 ) -> tuple[dict[str, pd.DataFrame], int]:
     """Preserve Enron test data and create validation data from training data."""
 
@@ -182,7 +182,7 @@ def validate_all_splits(splits: Mapping[str, Mapping[str, pd.DataFrame]]) -> Non
 
 
 def load_prepared_splits(
-    random_state: int = RANDOM_STATE,
+    random_state: int = DATA_SPLIT_SEED,
 ) -> tuple[dict[str, dict[str, pd.DataFrame]], pd.DataFrame]:
     """Download both datasets and return validated pandas splits and audit data."""
 
@@ -242,4 +242,3 @@ def summarize_splits(
                 }
             )
     return pd.DataFrame(rows)
-

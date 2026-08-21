@@ -13,6 +13,35 @@ TF-IDF logistic-regression baseline. Notebook 3 introduces a TextCNN trained
 from scratch on each domain. Notebook 4 fine-tunes a pretrained DistilBERT
 classifier and compares all three approaches.
 
+## Experimental protocol
+
+The results currently shown in Notebooks 2–4 are the initial benchmark runs
+with training seed `42`. Before running the robustness extension, the following
+protocol is fixed:
+
+- The cleaned train, validation, and test partitions always use split seed
+  `42`.
+- Neural training is repeated with seeds `13`, `42`, `73`, `101`, and `137`.
+  These seeds affect model initialization and training order, not the data
+  partitions.
+- SMS → Enron is the primary transfer direction because it directly answers
+  the research question. Enron → SMS is a secondary reverse-direction check;
+  both in-domain evaluations provide context.
+- Hyperparameters are selected separately for each training source using only
+  its training and validation data. Candidate configurations are ranked by
+  validation macro-F1 so both classes contribute to selection.
+- After selection, the configuration is locked before evaluation on the fixed
+  test benchmarks. Test labels do not influence hyperparameter, checkpoint, or
+  threshold selection.
+- The headline result is spam-class F1 (`spam = 1`) for SMS → Enron. Final
+  reporting will include every training seed rather than only the best run.
+
+The test results were inspected in the initial notebooks. They are therefore
+described as fixed confirmation benchmarks rather than pristine unseen
+holdouts. They remain excluded from all new design and selection decisions.
+The shared constants are defined in `src/protocol.py` so the notebooks cannot
+silently use different splits, seeds, directions, or metric roles.
+
 ## Repository structure
 
 ```text
@@ -25,6 +54,7 @@ src/
   data.py
   distilbert.py
   modeling.py
+  protocol.py
   textcnn.py
 results/
   textcnn_results.csv
@@ -32,6 +62,7 @@ tests/
   test_data.py
   test_distilbert.py
   test_modeling.py
+  test_protocol.py
   test_result_artifacts.py
   test_textcnn.py
 ```
@@ -53,6 +84,9 @@ The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
 same versioned code from `src/`. The public Kaggle links are the execution
 records for the GPU notebooks; the repository copies remain the versioned
 sources.
+
+The numerical findings below are the initial seed-42 benchmarks. They are kept
+as reference results until the repeated-run extension is complete.
 
 ## Notebook 1 findings
 
@@ -99,10 +133,12 @@ runs. The final section compares DistilBERT with both previous approaches.
 - Fine-tuning a pretrained Transformer improves some scores, but it does not
   remove the domain shift between short SMS messages and longer emails.
 
-Overall, all three approaches perform well in-domain and deteriorate sharply
-across domains. TextCNN gives the best SMS → Enron F1, while DistilBERT gives the
-best SMS → SMS F1. The central answer is therefore **no**: training on SMS alone
-does not produce a reliable email spam classifier.
+In the initial seed-42 benchmarks, all three approaches perform well in-domain
+and deteriorate sharply across domains. TextCNN gives the best SMS → Enron F1,
+while DistilBERT gives the best SMS → SMS F1. This evidence suggests that
+training on SMS alone does not produce a reliable email spam classifier; the
+locked robustness protocol will test whether that conclusion persists across
+training seeds and controlled experimental conditions.
 
 
 ## References

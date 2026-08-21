@@ -18,11 +18,10 @@ from sklearn.metrics import (
 )
 from tensorflow import keras
 
+from .protocol import REFERENCE_TRAINING_SEED
 
-RANDOM_STATE = 42
 
-
-def set_global_seed(random_state: int = RANDOM_STATE) -> None:
+def set_global_seed(random_state: int = REFERENCE_TRAINING_SEED) -> None:
     """Seed Python, NumPy, and TensorFlow for reproducible training."""
 
     tf.keras.utils.set_random_seed(random_state)
@@ -112,7 +111,7 @@ def fit_textcnn(
     train_frame: pd.DataFrame,
     validation_frame: pd.DataFrame,
     *,
-    random_state: int = RANDOM_STATE,
+    random_state: int = REFERENCE_TRAINING_SEED,
     max_tokens: int = 30_000,
     sequence_length: int = 256,
     embedding_dim: int = 128,

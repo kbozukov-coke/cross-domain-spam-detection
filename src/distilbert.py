@@ -17,8 +17,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-
-RANDOM_STATE = 42
+from .protocol import REFERENCE_TRAINING_SEED
 
 
 def balanced_class_weights(labels: Sequence[int]) -> dict[int, float]:
@@ -129,7 +128,7 @@ def run_distilbert_experiments(
     splits: Mapping[str, Mapping[str, pd.DataFrame]],
     *,
     model_name: str = "distilbert-base-uncased",
-    random_state: int = RANDOM_STATE,
+    random_state: int = REFERENCE_TRAINING_SEED,
     max_length: int = 256,
     learning_rate: float = 2e-5,
     epochs: int = 2,
