@@ -17,9 +17,9 @@ compares all three approaches.
 
 ## Experimental protocol
 
-The results currently shown in Notebooks 2–4 are the initial benchmark runs
-with training seed `42`. Before running the robustness extension, the following
-protocol is fixed:
+Notebook 3 now contains the completed five-seed TextCNN experiment. Notebook 4
+still contains its initial seed-`42` benchmark pending the equivalent
+robustness extension. The following protocol is fixed:
 
 - The cleaned train, validation, and test partitions always use split seed
   `42`.
@@ -97,7 +97,7 @@ tests/
 
 [Executed Kaggle notebook: 02 - TF-IDF baseline](https://www.kaggle.com/code/kaloyanbozukov/tf-idf-logistic-regression-baseline?scriptVersionId=344574378)
 
-[Initial Kaggle notebook: 03 - TextCNN](https://www.kaggle.com/code/kaloyanbozukov/notebook-3-textcnn-cross-domain-experiment)
+[Executed Kaggle notebook: 03 - TextCNN robustness experiment](https://www.kaggle.com/code/kaloyanbozukov/notebook-3?scriptVersionId=344580778)
 
 [Executed Kaggle notebook: 04 - DistilBERT fine-tuning](https://www.kaggle.com/code/kaloyanbozukov/notebook4?scriptVersionId=341691004)
 
@@ -115,8 +115,8 @@ same versioned code from `src/`. The public Kaggle links are the execution
 records for the GPU notebooks; the repository copies remain the versioned
 sources.
 
-The numerical findings below are the initial seed-42 benchmarks. They are kept
-as reference results until the repeated-run extension is complete.
+Notebook 2 is deterministic, Notebook 3 reports five training seeds, and the
+Notebook 4 figures below are still its initial seed-42 benchmark.
 
 ## Notebook 1 findings
 
@@ -142,18 +142,25 @@ Enron using mean validation macro-F1 across three seeds. Sequence length stays
 fixed at 256 for the later controlled length experiment. After both
 configurations are locked, each is retrained with all five reporting seeds.
 The notebook reports every seed, mean ± sample standard deviation, and the
-paired SMS in-domain-to-Enron transfer gap. Seed 42 is used only for
+paired SMS in-domain-to-Enron transfer gap. Seed 42 is singled out only for
 representative learning curves, confusion matrices, and error examples.
 
-The following values are the historical seed-42 reference and remain here only
-until the upgraded Kaggle notebook has been executed:
+Both sources select the `kernel_3` configuration. The locked five-seed results
+are:
 
-- SMS → SMS: F1 0.930.
-- Enron → Enron: F1 0.992.
-- SMS → Enron: F1 0.563, an improvement of 0.051 over the ML baseline.
-- Enron → SMS: F1 0.266, an improvement of 0.028 over the ML baseline.
-- The SMS → Enron transfer gap decreases from 0.436 to 0.367, although the
-  cross-domain ROC-AUC of 0.540 shows that generalization remains limited.
+- SMS → SMS: F1 `0.917 ± 0.009`.
+- Enron → Enron: F1 `0.992 ± 0.001`.
+- SMS → Enron: F1 `0.526 ± 0.065`, versus `0.512` for the deterministic
+  baseline.
+- Only three of five SMS → Enron runs exceed the baseline; the mean change is
+  `+0.014 ± 0.065`, so the apparent improvement is not consistent across
+  seeds.
+- Enron → SMS: F1 `0.271 ± 0.003`, versus `0.238` for the baseline.
+- The primary transfer gap remains `0.391 ± 0.064`.
+
+The old seed-42 SMS → Enron result of `0.563` was therefore a favorable single
+run and overstated the stability of TextCNN's advantage. The multi-seed result
+supports the broader conclusion of weak cross-domain generalization.
 
 The upgraded notebook exports separate tuning, per-seed, and aggregate CSV
 artifacts. It does not overwrite the legacy `textcnn_results.csv` before
@@ -175,12 +182,11 @@ runs. The final section compares DistilBERT with both previous approaches.
 - Fine-tuning a pretrained Transformer improves some scores, but it does not
   remove the domain shift between short SMS messages and longer emails.
 
-In the initial seed-42 benchmarks, all three approaches perform well in-domain
-and deteriorate sharply across domains. TextCNN gives the best SMS → Enron F1,
-while DistilBERT gives the best SMS → SMS F1. This evidence suggests that
-training on SMS alone does not produce a reliable email spam classifier; the
-locked robustness protocol will test whether that conclusion persists across
-training seeds and controlled experimental conditions.
+All approaches perform well in-domain and deteriorate sharply across domains.
+The five-seed TextCNN experiment shows that its small average SMS → Enron
+advantage over TF-IDF is not consistent across seeds. This strengthens the
+conclusion that training on SMS alone does not produce a reliable email spam
+classifier; Notebook 4 will next apply the robustness protocol to DistilBERT.
 
 
 ## References
