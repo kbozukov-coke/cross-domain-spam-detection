@@ -11,9 +11,9 @@ The experiment compares in-domain and cross-domain performance. Notebook 1
 loads, cleans, validates, and explores the data, including tokenizer-specific
 length and truncation rates. Notebook 2 establishes a TF-IDF
 logistic-regression baseline with expanded metrics and test-sample bootstrap
-intervals. Notebook 3 introduces a TextCNN trained from scratch on each domain.
-Notebook 4 fine-tunes a pretrained DistilBERT classifier and compares all three
-approaches.
+intervals. Notebook 3 performs validation-only TextCNN tuning and repeated-seed
+evaluation. Notebook 4 fine-tunes a pretrained DistilBERT classifier and
+compares all three approaches.
 
 ## Experimental protocol
 
@@ -23,9 +23,10 @@ protocol is fixed:
 
 - The cleaned train, validation, and test partitions always use split seed
   `42`.
-- Neural training is repeated with seeds `13`, `42`, `73`, `101`, and `137`.
-  These seeds affect model initialization and training order, not the data
-  partitions.
+- TextCNN candidates are screened with seeds `13`, `42`, and `73`; the locked
+  source-specific configurations are then retrained with seeds `13`, `42`,
+  `73`, `101`, and `137`. These seeds affect model initialization and training
+  order, not the data partitions.
 - SMS → Enron is the primary transfer direction because it directly answers
   the research question. Enron → SMS is a secondary reverse-direction check;
   both in-domain evaluations provide context.
@@ -92,9 +93,11 @@ tests/
 
 ## Run in Kaggle
 
-[Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/01-data-loading-and-eda)
+[Executed Kaggle notebook: 01 - Data Loading and EDA](https://www.kaggle.com/code/kaloyanbozukov/notebook-1-data-loading-and-exploratory-analysis)
 
-[Executed Kaggle notebook: 03 - TextCNN](https://www.kaggle.com/code/kaloyanbozukov/notebook-3-textcnn-cross-domain-experiment)
+[Executed Kaggle notebook: 02 - TF-IDF baseline](https://www.kaggle.com/code/kaloyanbozukov/tf-idf-logistic-regression-baseline?scriptVersionId=344574378)
+
+[Initial Kaggle notebook: 03 - TextCNN](https://www.kaggle.com/code/kaloyanbozukov/notebook-3-textcnn-cross-domain-experiment)
 
 [Executed Kaggle notebook: 04 - DistilBERT fine-tuning](https://www.kaggle.com/code/kaloyanbozukov/notebook4?scriptVersionId=341691004)
 
@@ -102,6 +105,10 @@ tests/
 2. Enable Internet access for the notebook.
 3. Enable a GPU accelerator for Notebooks 3 and 4.
 4. Choose **Run All**.
+
+Notebook 3 deliberately runs 24 validation-only tuning fits followed by 10
+locked reporting fits. They run sequentially and each TensorFlow model is
+released before the next fit to keep Kaggle memory use bounded.
 
 The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
 same versioned code from `src/`. The public Kaggle links are the execution
@@ -129,9 +136,17 @@ as reference results until the repeated-run extension is complete.
 
 ## Notebook 3: TextCNN
 
-The TextCNN learns task-specific word embeddings and local phrase patterns. It
-uses the same splits and four train/test combinations as the baseline so the
-comparison isolates the effect of the model architecture.
+The TextCNN learns task-specific word embeddings and local phrase patterns.
+Four small, predeclared configurations are compared separately for SMS and
+Enron using mean validation macro-F1 across three seeds. Sequence length stays
+fixed at 256 for the later controlled length experiment. After both
+configurations are locked, each is retrained with all five reporting seeds.
+The notebook reports every seed, mean ± sample standard deviation, and the
+paired SMS in-domain-to-Enron transfer gap. Seed 42 is used only for
+representative learning curves, confusion matrices, and error examples.
+
+The following values are the historical seed-42 reference and remain here only
+until the upgraded Kaggle notebook has been executed:
 
 - SMS → SMS: F1 0.930.
 - Enron → Enron: F1 0.992.
@@ -139,6 +154,10 @@ comparison isolates the effect of the model architecture.
 - Enron → SMS: F1 0.266, an improvement of 0.028 over the ML baseline.
 - The SMS → Enron transfer gap decreases from 0.436 to 0.367, although the
   cross-domain ROC-AUC of 0.540 shows that generalization remains limited.
+
+The upgraded notebook exports separate tuning, per-seed, and aggregate CSV
+artifacts. It does not overwrite the legacy `textcnn_results.csv` before
+Notebook 4 is migrated to the multi-seed schema.
 
 ## Notebook 4: DistilBERT fine-tuning
 
