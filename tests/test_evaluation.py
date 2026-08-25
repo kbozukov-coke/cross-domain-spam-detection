@@ -168,6 +168,26 @@ def test_prediction_table_can_preserve_supplied_ids() -> None:
     assert table["example_id"].tolist() == ["a", "b"]
 
 
+def test_prediction_table_can_override_setting() -> None:
+    frame = pd.DataFrame(
+        {
+            "text": ["hello", "winner"],
+            "label": [0, 1],
+            "source": ["sms", "sms"],
+        }
+    )
+    table = build_prediction_table(
+        frame,
+        [0.2, 0.9],
+        model="FLAN-T5",
+        training_seed=None,
+        train_domain="none",
+        test_domain="sms",
+        setting="zero-shot",
+    )
+    assert table["setting"].eq("zero-shot").all()
+
+
 def test_seed_aggregation_returns_runs_and_sample_statistics() -> None:
     results = pd.DataFrame(
         {

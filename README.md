@@ -14,7 +14,9 @@ logistic-regression baseline with expanded metrics and test-sample bootstrap
 intervals. Notebook 3 performs validation-only TextCNN tuning and repeated-seed
 evaluation. Notebook 4 applies the same robustness standard to DistilBERT,
 adds controlled length and class-count experiments, and compares all three
-approaches.
+approaches. Notebook 5 adds a zero-shot generative FLAN-T5 comparator with a
+fixed prompt, restricted-label confidence, calibration analysis, and a small
+free-generation audit.
 
 ## Experimental protocol
 
@@ -42,6 +44,13 @@ until that execution finishes. The following protocol is fixed:
 - After selection, the configuration is locked before evaluation on the fixed
   test benchmarks. Test labels do not influence hyperparameter, checkpoint, or
   threshold selection.
+- The zero-shot experiment uses one predeclared `google/flan-t5-base` checkpoint
+  pinned to revision `7bcac572ce56db69c1ea7c8af255c5d7c9672fc2` and one fixed
+  prompt. It performs no project-specific training or prompt search and never
+  shows train or validation examples to the model.
+- Zero-shot uncertainty is a stratified bootstrap interval over test examples,
+  not training-seed variability. Its SMS–Enron difference is a domain
+  performance gap rather than a transfer gap.
 - The headline result is spam-class F1 (`spam = 1`) for SMS → Enron. Final
   reporting will include every training seed rather than only the best run.
 
@@ -62,6 +71,10 @@ The robustness extension uses two model-independent utility modules:
   data, and one stable per-example prediction schema.
 - `src/controls.py` creates deterministic class-count-matched training subsets
   without changing the prepared splits or mutating their data frames.
+- `src/generative.py` implements teacher-forced `ham`/`spam` likelihood,
+  restricted-label confidence, strict generated-label parsing, and generation
+  compliance summaries. Its PyTorch imports are lazy, so the non-generative
+  notebooks do not acquire GPU state from this module.
 
 Control sampling uses seed `2026`; bootstrap resampling uses seed `20260821`.
 These are deliberately separate from the five neural training seeds. Model
@@ -76,11 +89,13 @@ notebooks/
   02_tfidf_logistic_baseline.ipynb
   03_textcnn.ipynb
   04_distilbert_fine_tuning.ipynb
+  05_zero_shot_generative.ipynb
 src/
   controls.py
   data.py
   distilbert.py
   evaluation.py
+  generative.py
   modeling.py
   protocol.py
   textcnn.py
@@ -94,6 +109,7 @@ tests/
   test_data.py
   test_distilbert.py
   test_evaluation.py
+  test_generative.py
   test_modeling.py
   test_protocol.py
   test_result_artifacts.py
@@ -112,7 +128,7 @@ tests/
 
 1. Import the notebooks in numerical order.
 2. Enable Internet access for the notebook.
-3. Enable a GPU accelerator for Notebooks 3 and 4.
+3. Enable a GPU accelerator for Notebooks 3, 4, and 5.
 4. Choose **Run All**.
 
 Notebook 3 deliberately runs 24 validation-only tuning fits followed by 10
@@ -124,6 +140,13 @@ Notebook 4 runs 9 SMS validation-only tuning fits, 10 locked reporting fits,
 fits run sequentially with immediate GPU cleanup; the expected dual-T4 runtime
 is approximately 1.5 to 2 hours.
 
+Notebook 5 is independent of Notebook 4's pending artifacts. It runs one
+`google/flan-t5-base` checkpoint on a single T4 in FP16, without training, and
+uses batches of eight. A typical run should take roughly 10–25 minutes plus
+the initial model download; the executed artifact records the actual runtime
+and peak GPU memory. DistilBERT is added to its final comparison only when the
+Notebook 4 summary CSV is present.
+
 The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
 same versioned code from `src/`. The public Kaggle links are the execution
 records for the GPU notebooks; the repository copies remain the versioned
@@ -131,7 +154,8 @@ sources.
 
 Notebook 2 is deterministic and Notebook 3 reports five training seeds.
 Notebook 4 must be re-executed in Kaggle before its robustness results replace
-the initial seed-42 benchmark.
+the initial seed-42 benchmark. Notebook 5 is prepared but must also be executed
+in Kaggle before any zero-shot numbers are added here.
 
 ## Notebook 1 findings
 
@@ -199,12 +223,30 @@ All approaches in the completed experiments perform well in-domain and
 deteriorate sharply across domains. The five-seed TextCNN experiment shows that
 its small average SMS → Enron advantage over TF-IDF is not consistent across
 seeds. Notebook 4 now tests whether that conclusion survives stronger
-DistilBERT controls; a zero-shot instruction-tuned generative model remains the
-next extension after its artifacts are collected.
+DistilBERT controls.
+
+## Notebook 5: zero-shot FLAN-T5
+
+Notebook 5 evaluates `google/flan-t5-base` as a domain-agnostic zero-shot
+comparator on the complete SMS and Enron test sets. A single prompt defines
+`ham` and `spam`; there are no demonstrations, prompt search, or parameter
+updates. The primary prediction compares the complete decoder-sequence
+log-likelihood of the two labels, including EOS, and normalizes only over those
+two choices.
+
+The notebook reports the shared classification and calibration metrics, a 95%
+stratified bootstrap interval for F1, confidence–coverage tables, measured
+truncation, and a balanced free-generation audit of 50 examples per domain.
+Invalid generated answers remain in the denominator. Five compact CSV
+artifacts are exported without original message text, including calibration
+and confidence–coverage tables. Core artifacts are saved before the optional
+cross-notebook comparison, so Notebook 4 cannot prevent their export.
 
 
 ## References
 
 - Yoon Kim. [Convolutional Neural Networks for Sentence Classification](https://aclanthology.org/D14-1181/), EMNLP 2014.
 - Victor Sanh et al. [DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter](https://arxiv.org/abs/1910.01108), 2019.
+- Hyung Won Chung et al. [Scaling Instruction-Finetuned Language Models](https://arxiv.org/abs/2210.11416), 2022.
+- Google. [FLAN-T5 Base model card](https://huggingface.co/google/flan-t5-base).
 - Shai Ben-David et al. [A theory of learning from different domains](https://link.springer.com/article/10.1007/s10994-009-5152-4), Machine Learning 2010.

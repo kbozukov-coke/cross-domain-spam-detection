@@ -313,6 +313,7 @@ def build_prediction_table(
     training_seed: int | None,
     train_domain: str,
     test_domain: str,
+    setting: str | None = None,
     threshold: float = DECISION_THRESHOLD,
     id_column: str | None = None,
 ) -> pd.DataFrame:
@@ -329,6 +330,8 @@ def build_prediction_table(
         raise ValueError(f"The frame is missing required columns: {sorted(missing_columns)}")
     if id_column is not None and id_column not in frame.columns:
         raise ValueError(f"The frame does not contain id_column={id_column!r}.")
+    if setting is not None and (not isinstance(setting, str) or not setting):
+        raise ValueError("setting must be a non-empty string when supplied.")
     y_true, y_probability = validate_probabilities(frame["label"], spam_probabilities)
     numeric_threshold = _validate_threshold(threshold)
     y_pred = (y_probability >= numeric_threshold).astype(np.int8)
@@ -349,7 +352,13 @@ def build_prediction_table(
             "train_domain": train_domain,
             "test_domain": test_domain,
             "setting": (
-                "in-domain" if train_domain == test_domain else "cross-domain"
+                setting
+                if setting is not None
+                else (
+                    "in-domain"
+                    if train_domain == test_domain
+                    else "cross-domain"
+                )
             ),
             "label": y_true,
             "prediction": y_pred,
