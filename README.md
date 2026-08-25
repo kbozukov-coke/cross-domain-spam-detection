@@ -71,10 +71,10 @@ The robustness extension uses two model-independent utility modules:
   data, and one stable per-example prediction schema.
 - `src/controls.py` creates deterministic class-count-matched training subsets
   without changing the prepared splits or mutating their data frames.
-- `src/generative.py` implements teacher-forced `ham`/`spam` likelihood,
-  restricted-label confidence, strict generated-label parsing, and generation
-  compliance summaries. Its PyTorch imports are lazy, so the non-generative
-  notebooks do not acquire GPU state from this module.
+- `src/generative.py` implements length-normalized teacher-forced `ham`/`spam`
+  scores, score-derived confidence, strict generated-label parsing, and
+  generation compliance summaries. Its PyTorch imports are lazy, so the
+  non-generative notebooks do not acquire GPU state from this module.
 
 Control sampling uses seed `2026`; bootstrap resampling uses seed `20260821`.
 These are deliberately separate from the five neural training seeds. Model
@@ -230,9 +230,11 @@ DistilBERT controls.
 Notebook 5 evaluates `google/flan-t5-base` as a domain-agnostic zero-shot
 comparator on the complete SMS and Enron test sets. A single prompt defines
 `ham` and `spam`; there are no demonstrations, prompt search, or parameter
-updates. The primary prediction compares the complete decoder-sequence
-log-likelihood of the two labels, including EOS, and normalizes only over those
-two choices.
+updates. Because T5 tokenizes `ham` and `spam` into different numbers of
+tokens, the primary prediction compares their mean decoder-token log
+probability, including EOS, and then normalizes only over those two choices.
+The resulting score-derived pseudo-probability is not a globally normalized
+sequence probability and remains sensitive to the selected verbalizers.
 
 The notebook reports the shared classification and calibration metrics, a 95%
 stratified bootstrap interval for F1, confidence–coverage tables, measured

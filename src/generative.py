@@ -38,7 +38,7 @@ def spam_probabilities_from_label_scores(
     *,
     label_names: Sequence[str] = LABEL_NAMES,
 ) -> np.ndarray:
-    """Normalize two finite label scores into spam probabilities."""
+    """Softmax two finite label scores into spam pseudo-probabilities."""
 
     names = tuple(label_names)
     if len(names) != 2 or len(set(names)) != 2 or set(names) != set(LABEL_NAMES):
@@ -229,10 +229,6 @@ def _candidate_token_lengths(
         if not token_ids or token_ids[-1] != tokenizer.eos_token_id:
             raise ValueError("Candidate labels must include the tokenizer EOS token.")
         lengths.append(len(token_ids))
-    if len(set(lengths)) != 1:
-        raise ValueError(
-            "Candidate labels must have equal token lengths for likelihood scoring."
-        )
     return tuple(lengths)
 
 
@@ -248,7 +244,12 @@ def score_candidate_labels(
     device: object | None = None,
     verbose: bool = False,
 ) -> pd.DataFrame:
-    """Score ham and spam as complete decoder target sequences."""
+    """Score ham and spam by mean decoder-token log probability.
+
+    The score includes EOS and is averaged across non-padding target tokens.
+    Length normalization keeps verbalizers with different token counts
+    comparable without replacing the human-readable ``ham``/``spam`` labels.
+    """
 
     import torch
 
@@ -314,9 +315,11 @@ def score_candidate_labels(
                     dim=-1,
                     index=target_ids.unsqueeze(-1),
                 ).squeeze(-1)
-                sequence_scores = (
+                sequence_log_probability = (
                     selected_log_probabilities * target_mask
                 ).sum(dim=1)
+                target_token_count = target_mask.sum(dim=1)
+                sequence_scores = sequence_log_probability / target_token_count
                 batch_label_scores.append(
                     sequence_scores.detach().cpu().numpy()
                 )

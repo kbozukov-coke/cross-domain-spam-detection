@@ -34,7 +34,12 @@ class FakeTokenizer:
     ):
         if text_target is not None:
             targets = [text_target] if isinstance(text_target, str) else text_target
-            token_ids = [[1 if target == "ham" else 2, self.eos_token_id] for target in targets]
+            token_ids = [
+                [1, 4, self.eos_token_id]
+                if target == "ham"
+                else [2, self.eos_token_id]
+                for target in targets
+            ]
         else:
             prompts = [texts] if isinstance(texts, str) else texts
             token_ids = []
@@ -79,11 +84,11 @@ class FakeSequenceModel:
         batch_size, target_length = labels.shape
         logits = torch.zeros(batch_size, target_length, 10)
         for row, marker in enumerate(encoder_outputs.marker.tolist()):
-            preferred_label_token = 2 if marker == 1 else 1
-            other_label_token = 1 if marker == 1 else 2
-            logits[row, 0, preferred_label_token] = 5.0
-            logits[row, 0, other_label_token] = -5.0
-            logits[row, 1, FakeTokenizer.eos_token_id] = 5.0
+            candidate_is_spam = int(labels[row, 0]) == 2
+            candidate_is_preferred = candidate_is_spam == (marker == 1)
+            target_logit = 5.0 if candidate_is_preferred else -5.0
+            for position, token_id in enumerate(labels[row].tolist()):
+                logits[row, position, token_id] = target_logit
         return SimpleNamespace(logits=logits)
 
     def generate(
@@ -211,10 +216,23 @@ def test_candidate_scoring_preserves_rows_and_reuses_encoder() -> None:
     )
 
     assert scores["prediction"].tolist() == [0, 1]
-    assert scores["spam_probability"].iloc[0] < 0.5
-    assert scores["spam_probability"].iloc[1] > 0.5
+    preferred_score = 5.0 - np.log(np.exp(5.0) + 9.0)
+    rejected_score = -5.0 - np.log(np.exp(-5.0) + 9.0)
+    expected_spam_probability = np.exp(rejected_score) / (
+        np.exp(preferred_score) + np.exp(rejected_score)
+    )
+    assert scores["ham_score"].iloc[0] == pytest.approx(preferred_score)
+    assert scores["spam_score"].iloc[0] == pytest.approx(rejected_score)
+    assert scores["spam_probability"].iloc[0] == pytest.approx(
+        expected_spam_probability
+    )
+    assert scores["spam_probability"].iloc[1] == pytest.approx(
+        1 - expected_spam_probability
+    )
     assert scores["label_score_margin"].iloc[0] < 0
     assert scores["label_score_margin"].iloc[1] > 0
+    assert len(FakeTokenizer()(text_target="ham")["input_ids"]) == 3
+    assert len(FakeTokenizer()(text_target="spam")["input_ids"]) == 2
     assert model.encoder_calls == 1
     assert model.decoder_calls == 2
 
