@@ -12,17 +12,14 @@ loads, cleans, validates, and explores the data, including tokenizer-specific
 length and truncation rates. Notebook 2 establishes a TF-IDF
 logistic-regression baseline with expanded metrics and test-sample bootstrap
 intervals. Notebook 3 performs validation-only TextCNN tuning and repeated-seed
-evaluation. Notebook 4 applies the same robustness standard to DistilBERT,
-adds controlled length and class-count experiments, and compares all three
-approaches. Notebook 5 adds a zero-shot generative FLAN-T5 comparator with a
-fixed prompt, restricted-label confidence, calibration analysis, and a small
-free-generation audit.
+evaluation. Notebook 4 defines a robust DistilBERT protocol with controlled
+length and class-count experiments. Notebook 5 adds a zero-shot generative
+FLAN-T5 comparator with a fixed prompt, restricted-label confidence,
+calibration analysis, and a small free-generation audit.
 
 ## Experimental protocol
 
-Notebook 3 contains the completed five-seed TextCNN experiment. Notebook 4 is
-prepared for its expanded Kaggle run; its new result artifacts are not reported
-until that execution finishes. The following protocol is fixed:
+The model comparisons follow a predeclared protocol:
 
 - The cleaned train, validation, and test partitions always use split seed
   `42`.
@@ -30,17 +27,12 @@ until that execution finishes. The following protocol is fixed:
   source-specific configurations are then retrained with seeds `13`, `42`,
   `73`, `101`, and `137`. These seeds affect model initialization and training
   order, not the data partitions.
-- DistilBERT tuning is restricted to the primary SMS-trained model: three
-  predeclared candidates are ranked with seeds `13`, `42`, and `73`. The
-  secondary Enron-trained diagnostic keeps its reference configuration. Both
-  locked source models are then evaluated with all five reporting seeds.
 - SMS → Enron is the primary transfer direction because it directly answers
   the research question. Enron → SMS is a secondary reverse-direction check;
   both in-domain evaluations provide context.
 - Candidate configurations are ranked by source-validation macro-F1 so both
   classes contribute to selection. TextCNN is tuned separately for both
-  sources; DistilBERT HPO focuses on the primary SMS source to keep the
-  experiment computationally proportionate.
+  sources.
 - After selection, the configuration is locked before evaluation on the fixed
   test benchmarks. Test labels do not influence hyperparameter, checkpoint, or
   threshold selection.
@@ -52,7 +44,7 @@ until that execution finishes. The following protocol is fixed:
   not training-seed variability. Its SMS–Enron difference is a domain
   performance gap rather than a transfer gap.
 - The headline result is spam-class F1 (`spam = 1`) for SMS → Enron. Final
-  reporting will include every training seed rather than only the best run.
+  reporting includes every TextCNN training seed rather than only the best run.
 
 The test results were inspected in the initial notebooks. They are therefore
 described as fixed confirmation benchmarks rather than pristine unseen
@@ -60,9 +52,19 @@ holdouts. They remain excluded from all new design and selection decisions.
 The shared constants are defined in `src/protocol.py` so the notebooks cannot
 silently use different splits, seeds, directions, or metric roles.
 
+## Related work
+
+The TextCNN experiment follows Kim's sentence-classification architecture but
+tests a different question: stability under a large SMS-to-email domain shift.
+DistilBERT supplies a compact transformer benchmark and Notebook 4 specifies
+stronger robustness controls. FLAN-T5 tests whether instruction tuning alone
+supplies useful zero-shot transfer for spam classification. The interpretation
+follows domain-adaptation research: strong source performance need not imply
+low target error when the source and target distributions differ substantially.
+
 ## Shared evaluation and controls
 
-The robustness extension uses two model-independent utility modules:
+The robustness work uses three model-independent utility modules:
 
 - `src/evaluation.py` computes the original metrics together with macro-F1,
   balanced accuracy, MCC, PR-AUC, class support, Brier score, log loss, and
@@ -78,8 +80,8 @@ The robustness extension uses two model-independent utility modules:
 
 Control sampling uses seed `2026`; bootstrap resampling uses seed `20260821`.
 These are deliberately separate from the five neural training seeds. Model
-checkpoints are not part of this layer, and no training is performed by either
-module.
+checkpoints are not part of this layer, and none of these utility modules trains
+a model by itself.
 
 ## Repository structure
 
@@ -100,6 +102,11 @@ src/
   protocol.py
   textcnn.py
 results/
+  generative_generation_audit.csv
+  generative_zero_shot_calibration.csv
+  generative_zero_shot_confidence_coverage.csv
+  generative_zero_shot_predictions.csv
+  generative_zero_shot_results.csv
   textcnn_tuning_results.csv
   textcnn_tuning_summary.csv
   textcnn_seed_results.csv
@@ -124,28 +131,31 @@ tests/
 
 [Executed Kaggle notebook: 03 - TextCNN robustness experiment](https://www.kaggle.com/code/kaloyanbozukov/notebook3?scriptVersionId=344585113)
 
-[Initial Kaggle benchmark: 04 - DistilBERT fine-tuning](https://www.kaggle.com/code/kaloyanbozukov/notebook4?scriptVersionId=341691004)
+[Kaggle notebook: 04 - DistilBERT fine-tuning](https://www.kaggle.com/code/kaloyanbozukov/notebook4?scriptVersionId=341691004)
 
-1. Import the notebooks in numerical order.
+[Executed Kaggle notebook: 05 - zero-shot FLAN-T5](https://www.kaggle.com/code/kaloyanbozukov/notebook5?scriptVersionId=344857355)
+
+1. Import the required notebook from this repository.
 2. Enable Internet access for the notebook.
 3. Enable a GPU accelerator for Notebooks 3, 4, and 5.
 4. Choose **Run All**.
+
+The notebooks share the frozen data protocol but can be executed independently.
 
 Notebook 3 deliberately runs 24 validation-only tuning fits followed by 10
 locked reporting fits. They run sequentially and each TensorFlow model is
 released before the next fit to keep Kaggle memory use bounded.
 
-Notebook 4 runs 9 SMS validation-only tuning fits, 10 locked reporting fits,
-9 additional SMS length variants, and 5 Enron count-matched controls. The 33
-fits run sequentially with immediate GPU cleanup; the expected dual-T4 runtime
-is approximately 1.5 to 2 hours.
+Notebook 4 defines a 33-fit DistilBERT robustness protocol: 9 SMS
+validation-only tuning fits, 10 locked reporting fits, 9 additional SMS length
+variants, and 5 Enron count-matched controls. Its public Kaggle link records the
+initial seed-42 benchmark.
 
-Notebook 5 is independent of Notebook 4's pending artifacts. It runs one
+Notebook 5 is independent of Notebook 4 artifacts. It runs one
 `google/flan-t5-base` checkpoint on a single T4 in FP16, without training, and
-uses batches of eight. A typical run should take roughly 10–25 minutes plus
-the initial model download; the executed artifact records the actual runtime
-and peak GPU memory. DistilBERT is added to its final comparison only when the
-Notebook 4 summary CSV is present.
+uses batches of eight. The executed scoring pass took 7.2 seconds for SMS and
+50.7 seconds for Enron, excluding model download and setup. Its optional
+cross-notebook table is artifact-driven and does not affect the core exports.
 
 The first cell clones this repository into `/kaggle/working`, so Kaggle uses the
 same versioned code from `src/`. The public Kaggle links are the execution
@@ -153,9 +163,27 @@ records for the GPU notebooks; the repository copies remain the versioned
 sources.
 
 Notebook 2 is deterministic and Notebook 3 reports five training seeds.
-Notebook 4 must be re-executed in Kaggle before its robustness results replace
-the initial seed-42 benchmark. Notebook 5 is prepared but must also be executed
-in Kaggle before any zero-shot numbers are added here.
+Notebook 5 has been executed and its five result artifacts are stored in
+`results/`.
+
+Repository notebook outputs are intentionally cleared; the versioned Kaggle
+runs above are the execution records and the compact CSV files in `results/`
+are the machine-readable evidence.
+
+## Local verification
+
+The data is downloaded at runtime, so no raw dataset copy is committed. A local
+CPU environment is sufficient for the unit and artifact tests:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+The neural experiments are intended for Kaggle GPU execution rather than local
+training.
 
 ## Notebook 1 findings
 
@@ -177,9 +205,10 @@ in Kaggle before any zero-shot numbers are added here.
 
 The TextCNN learns task-specific word embeddings and local phrase patterns.
 Four small, predeclared configurations are compared separately for SMS and
-Enron using mean validation macro-F1 across three seeds. Sequence length stays
-fixed at 256 for the later controlled length experiment. After both
-configurations are locked, each is retrained with all five reporting seeds.
+Enron using mean validation macro-F1 across three seeds. Sequence length is
+fixed at 256 for comparability; Notebook 4 defines the separate controlled
+length protocol. After both configurations are locked, each is retrained with
+all five reporting seeds.
 The notebook reports every seed, mean ± sample standard deviation, and the
 paired SMS in-domain-to-Enron transfer gap. Seed 42 is singled out only for
 representative learning curves, confusion matrices, and error examples.
@@ -202,28 +231,23 @@ run and overstated the stability of TextCNN's advantage. The multi-seed result
 supports the broader conclusion of weak cross-domain generalization.
 
 The repository includes the executed tuning, per-seed, and aggregate CSV
-artifacts exported by the upgraded notebook. Notebook 4 consumes the five-seed
-artifacts rather than the obsolete single-seed result.
+artifacts exported by the upgraded notebook. They replace the obsolete
+single-seed result in the final comparison.
 
-## Notebook 4: DistilBERT fine-tuning
+## Notebook 4: DistilBERT robustness protocol
 
 Notebook 4 fine-tunes `distilbert-base-uncased` separately on SMS and Enron.
-It performs validation-only SMS HPO, five-seed evaluation of all four domain
-pairs, a `64/128/256/512` max-length sensitivity experiment, and an Enron
-training subset matched to the exact SMS class counts. It also reports
-bootstrap F1 intervals, Brier score, log loss, ECE, and a representative
-reliability diagram.
+The protocol includes validation-only SMS HPO,
+five-seed evaluation of all four domain pairs, a `64/128/256/512` max-length
+sensitivity experiment, and an Enron training subset matched to the exact SMS
+class counts. Its reporting code covers bootstrap F1 intervals, Brier score,
+log loss, ECE, and a representative reliability diagram.
 
-The earlier seed-42 run is retained only as motivation; its values are not used
-as the final result. The expanded notebook exports separate tuning, per-seed,
-length, and count-control CSV artifacts. This section will be updated with
-mean ± sample standard deviation after the new Kaggle execution.
-
-All approaches in the completed experiments perform well in-domain and
-deteriorate sharply across domains. The five-seed TextCNN experiment shows that
-its small average SMS → Enron advantage over TF-IDF is not consistent across
-seeds. Notebook 4 now tests whether that conclusion survives stronger
-DistilBERT controls.
+The completed supervised approaches perform well in-domain and deteriorate
+sharply across domains. The five-seed TextCNN experiment shows that its small
+average SMS → Enron advantage over TF-IDF is not consistent across seeds.
+Notebook 4 provides the corresponding transformer robustness and control
+protocol.
 
 ## Notebook 5: zero-shot FLAN-T5
 
@@ -243,6 +267,43 @@ Invalid generated answers remain in the denominator. Five compact CSV
 artifacts are exported without original message text, including calibration
 and confidence–coverage tables. Core artifacts are saved before the optional
 cross-notebook comparison, so Notebook 4 cannot prevent their export.
+
+The executed zero-shot results show a strong bias toward `ham`:
+
+- SMS: spam F1 `0.019`, 95% bootstrap CI `[0.000, 0.059]`, recall
+  `0.010`, and ROC-AUC `0.680`. Only 8 of 774 messages are predicted as spam.
+- Enron: spam F1 `0.062`, CI `[0.041, 0.085]`, recall `0.032`, and
+  ROC-AUC `0.661`. Only 33 of 1,981 emails are predicted as spam.
+- SMS accuracy is `0.868`, but balanced accuracy is `0.500`; the high raw
+  accuracy mostly reflects the majority ham class rather than useful spam
+  detection.
+- No SMS message is truncated. Enron truncation affects 581 of 1,981 examples
+  (`29.3%`), so long-email context remains a limitation rather than a complete
+  explanation for the failure.
+- In the balanced generation audit, valid one-label output is produced for
+  `98%` of SMS and `68%` of Enron examples. Accuracy with invalid outputs
+  counted as wrong is `48%` and `20%`, respectively. Agreement between valid
+  generation and restricted-label predictions reflects their shared ham bias,
+  not strong reliability.
+
+For descriptive context, the zero-shot F1 scores are far below the SMS-trained
+TF-IDF results (`0.948` on SMS and `0.512` on Enron) and the five-seed TextCNN
+means (`0.915` and `0.526`). These protocols are not identical: FLAN-T5 has no
+project training domain and its bootstrap interval measures test-sample
+uncertainty rather than training-seed variation. The negative result is still
+informative: this fixed-prompt, off-the-shelf generative model does not solve
+spam detection, and its moderate ranking signal does not translate into useful
+classification at the predeclared threshold.
+
+## Final conclusion
+
+The answer to the research question is **no, not reliably**. All trained models
+perform strongly in-domain, but their spam F1 drops sharply after crossing the
+SMS/email boundary. TextCNN's small mean advantage over TF-IDF is unstable
+across seeds, and the fixed-prompt FLAN-T5 comparator is strongly biased toward
+`ham`. The combined evidence points to domain mismatch—not model complexity
+alone—as the central limitation. Deployment claims would require target-domain
+labels, external validation, and additional adaptation experiments.
 
 
 ## References
